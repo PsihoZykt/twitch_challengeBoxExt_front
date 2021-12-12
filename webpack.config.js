@@ -10,36 +10,11 @@ const bundlePath = path.resolve(__dirname, "dist/")
 
 module.exports = (_env,argv)=> {
   let entryPoints = {
-    VideoComponent:{
-      path:"./src/VideoComponent.js",
-      outputHtml:"video_component.html",
-      build:true
-    },
-    VideoOverlay:{
-      path:"./src/VideoOverlay.js",
-      outputHtml:"video_overlay.html",
-      build:true
-    },
     Panel:{
       path:"./src/Panel.js",
       outputHtml:"panel.html",
       build:true
     },
-    Config:{
-      path:"./src/Config.js",
-      outputHtml:"config.html",
-      build:true
-    },
-    LiveConfig:{
-      path:"./src/LiveConfig.js",
-      outputHtml:"live_config.html",
-      build:true
-    },
-    Mobile:{
-      path:"./src/Mobile.js",
-      outputHtml:"mobile.html",
-      build:true
-    }
   }
 
   let entry = {}
@@ -79,7 +54,7 @@ module.exports = (_env,argv)=> {
         },
         {
           test: /\.css$/,
-          use: [ 'style-loader', 'css-loader' ]
+          use: [ 'style-loader', 'css-loader']
         },
         {
           test: /\.scss$/,
@@ -93,9 +68,11 @@ module.exports = (_env,argv)=> {
           test: /\.(jpe?g|png|gif|svg)$/i, 
           loader: "file-loader",
           options:{
-            name:"img/[name].[ext]"
-          }
-        }
+            name:"img/[name].[ext]",
+            importLoaders: 1,
+            minimize: true          }
+        },
+
       ]
     },
     resolve: { extensions: ['*', '.js', '.jsx'] },

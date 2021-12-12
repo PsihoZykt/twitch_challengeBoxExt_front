@@ -1,95 +1,163 @@
-import React from 'react'
-import Authentication from '../../util/Authentication/Authentication'
+// import CameraPlaceholder from "./cameraPlaceholder/CameraPlaceholder";
+import './app.css'
+import Auth from '../../util/Authentication/Authentication'
+import React, {useEffect, useState} from "react";
+import axios from "axios";
 
-import './App.css'
-
-export default class App extends React.Component{
-    constructor(props){
-        super(props)
-        this.Authentication = new Authentication()
-
-        //if the extension is running on twitch or dev rig, set the shorthand here. otherwise, set to null. 
-        this.twitch = window.Twitch ? window.Twitch.ext : null
-        this.state={
-            finishedLoading:false,
-            theme:'light',
-            isVisible:true
+function App() {
+    let [Authentication, setAuthentication] = useState(new Auth())
+    let twitch = window.Twitch ? window.Twitch.ext : null
+    let [finishedLoading, setFinishedLoading] = useState(false)
+    let [theme, setTheme] = useState("light")
+    let [isVisible, setIsVisible] = useState(true)
+    let [color, setColor] = useState("red")
+    let [counter, setCounter] = useState(0)
+    let [availableClicks, setAvailableClicks] = useState(10)
+    let contextUpdate = (context, delta) => {
+        if (delta.includes('theme')) {
+            setTheme(context.theme)
         }
     }
+    let visibilityChanged = (isVisible) => {
+        setIsVisible(isVisible)
+    }
+    let cycleColor = () => {
+        const instance = axios.create({
+            headers: {'Authorization': 'Bearer ' + Authentication.state.token}
+        });
+        instance.post('https://psihozykt-twitch-ext-server.herokuapp.comrr/color/cycle').then((res) => {
+            twitch.rig.log(res.data)
 
-    contextUpdate(context, delta){
-        if(delta.includes('theme')){
-            this.setState(()=>{
-                return {theme:context.theme}
+        }).catch(err => {
+            twitch.rig.log(err)
+        })
+    }
+    let increaseCounter = () => {
+        if (availableClicks > 0) {
+            const instance = axios.create({
+                headers: {'Authorization': 'Bearer ' + Authentication.state.token}
+            });
+            instance.post('https://psihozykt-twitch-ext-server.herokuapp.com/counter').then((res) => {
+                twitch.rig.log(res.data)
+                setAvailableClicks(prevState => availableClicks - 1)
+            }).catch(err => {
+                twitch.rig.log(err)
             })
         }
     }
-
-    visibilityChanged(isVisible){
-        this.setState(()=>{
-            return {
-                isVisible
-            }
+    let refreshCounter = () => {
+        const instance = axios.create({
+            headers: {'Authorization': 'Bearer ' + Authentication.state.token}
+        });
+        instance.post('https://psihozykt-twitch-ext-server.herokuapp.com/counter', {counter: 0}).then((res) => {
+            twitch.rig.log(res.data)
+        }).catch(err => {
+            twitch.rig.log(err)
         })
     }
 
-    componentDidMount(){
-        if(this.twitch){
-            this.twitch.onAuthorized((auth)=>{
-                this.Authentication.setToken(auth.token, auth.userId)
-                if(!this.state.finishedLoading){
+
+    useEffect(() => {
+        if (twitch) {
+            twitch.onAuthorized((auth) => {
+                twitch.rig.log("Authentificated")
+
+                Authentication.setToken(auth.token, auth.userId)
+
+                if (!finishedLoading) {
                     // if the component hasn't finished loading (as in we've not set up after getting a token), let's set it up now.
 
                     // now we've done the setup for the component, let's set the state to true to force a rerender with the correct data.
-                    this.setState(()=>{
-                        return {finishedLoading:true}
-                    })
+                    setFinishedLoading(true)
                 }
+                const instance = axios.create({
+                    headers: {'Authorization': 'Bearer ' + Authentication.state.token}
+                });
+                instance.get('https://psihozykt-twitch-ext-server.herokuapp.com/counter').then((res) => {
+                    setCounter(res.data.counter)
+                }).catch(err => {
+                    twitch.rig.log(err)
+                })
+                setInterval(() => {
+                    setAvailableClicks((prevState => prevState + 1))
+                }, 3000)
+
             })
 
-            this.twitch.listen('broadcast',(target,contentType,body)=>{
-                this.twitch.rig.log(`New PubSub message!\n${target}\n${contentType}\n${body}`)
-                // now that you've got a listener, do something with the result... 
-
+            twitch.listen('broadcast', (target, contentType, body) => {
+                twitch.rig.log(`New PubSub message!\n${target}\n${contentType}\n${body}`)
+                // now that you've got a listener, do something with the result...
+                setCounter(body)
                 // do something...
 
             })
 
-            this.twitch.onVisibilityChanged((isVisible,_c)=>{
-                this.visibilityChanged(isVisible)
+            twitch.onVisibilityChanged((isVisible, _c) => {
+
+                visibilityChanged(isVisible)
             })
 
-            this.twitch.onContext((context,delta)=>{
-                this.contextUpdate(context,delta)
+            twitch.onContext((context, delta) => {
+                contextUpdate(context, delta)
             })
         }
-    }
-
-    componentWillUnmount(){
-        if(this.twitch){
-            this.twitch.unlisten('broadcast', ()=>console.log('successfully unlistened'))
+    }, [])
+    useEffect(() => {
+        if (twitch) {
+            return twitch.unlisten('broadcast', () => console.log('successfully unlistened'))
         }
-    }
-    
-    render(){
-        if(this.state.finishedLoading && this.state.isVisible){
-            return (
-                <div className="App">
-                    <div className={this.state.theme === 'light' ? 'App-light' : 'App-dark'} >
-                        <p>Hello world!</p>
-                        <p>My token is: {this.Authentication.state.token}</p>
-                        <p>My opaque ID is {this.Authentication.getOpaqueId()}.</p>
-                        <div>{this.Authentication.isModerator() ? <p>I am currently a mod, and here's a special mod button <input value='mod button' type='button'/></p>  : 'I am currently not a mod.'}</div>
-                        <p>I have {this.Authentication.hasSharedId() ? `shared my ID, and my user_id is ${this.Authentication.getUserId()}` : 'not shared my ID'}.</p>
+    })
+
+    // let onCircleClick = (token) => {
+    //
+    //     instance.post('http://https://psihozykt-twitch-ext-server.herokuapp.com:8081/color/cycle', {})
+    // }
+
+
+    return (
+        <div>
+            {finishedLoading && isVisible &&
+
+                <div className="wrapper">
+                    {/*<p>Hello world!</p>*/}
+                    {/*<p>My token is: {Authentication.state.token}</p>*/}
+                    {/*<p>My opaque ID is {Authentication.getOpaqueId()}.</p>*/}
+                    {/*<div>{Authentication.isModerator() ?*/}
+                    {/*    <p>I am currently a mod, and here's a special mod button <input value='mod button'*/}
+                    {/*                                                                    type='button'/>*/}
+                    {/*    </p> : 'I am currently not a mod.'}</div>*/}
+                    {/*<p>I*/}
+                    {/*    have {Authentication.hasSharedId() ? `shared my ID, and my user_id is ${Authentication.getUserId()}` : 'not shared my ID'}.</p>*/}
+
+                    {/*<CameraPlaceholder />*/}
+                    <input type="button" onClick={() => refreshCounter()} value="refresh counter"/>
+                    <div className="challengeBoxWrapper" onClick={increaseCounter}>
+                    <div  className="challengeBox">
+                        {/*{counter}*/}
+                        {/*<div>{availableClicks} </div>*/}
+                        <div className="filler" style={{height: `${ 100 - (counter * 10)}%`}}> </div>
+                        <div className="progressBar" style={{height: `${(counter * 10)}%`}}>
+
+                        </div>
                     </div>
-                </div>
-            )
-        }else{
-            return (
-                <div className="App">
-                </div>
-            )
-        }
+                    </div>
+                    {/*<CycleTest cycleColor={cycleColor}/>*/}
+                </div>}
+            <div>
+                {/*<div  className="challengeBoxWrapper" onClick={() => console.log('click')}>*/}
+                {/*    <div  className="challengeBox">*/}
+                {/*        <div></div>*/}
+                {/*        <div className="filler" style={{height: `40%`}}> </div>*/}
+                {/*        <div className="progressBar" style={{height: `60%`}}>*/}
 
-    }
+                {/*        </div>*/}
+                {/*    </div>*/}
+                {/*</div>*/}
+
+                {finishedLoading.toString()} {isVisible.toString()}
+            </div>
+        </div>
+    );
 }
+
+export default App;
