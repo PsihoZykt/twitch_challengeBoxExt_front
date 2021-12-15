@@ -1,0 +1,33 @@
+@import '../variables';
+$challenge-box-wrapper-width: $wrapper-width/16;
+$challenge-box-wrapper-height: $wrapper-height/4;
+
+.challengeBoxWrapper {
+    width: $challenge-box-wrapper-width;
+    height: $challenge-box-wrapper-height;
+}
+.challengeBox {
+    width: inherit;
+    height: inherit;
+    background-image: url(./assets/AdrelanlinGray.png);
+    /*background-size:     cover;*/
+    background-size:  $challenge-box-wrapper-width $challenge-box-wrapper-height ;
+    background-repeat:   no-repeat;
+    background-position: center center;
+    position: relative;
+    overflow: hidden;
+    left: 5px;
+top: 300px;
+}
+.progressBar
+{
+    background-image: url(./assets/AdrelanlinColored.png);
+    background-size: $challenge-box-wrapper-width $challenge-box-wrapper-height;
+    /*background-size: cover;*/
+    background-position: 100% 100%;
+    /*background-position: center;*/
+    background-repeat: no-repeat;
+    position: absolute;
+    display: block;
+    width: inherit;
+}
